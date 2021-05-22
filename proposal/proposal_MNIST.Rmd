@@ -1,0 +1,82 @@
+---
+title: "Proposal"
+author: "Yinqiao Yan"
+date: "3/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# MNIST
+
+## Read data
+
+Firstly, we use `readr::read_csv()` function to load the data preprocessed in Python. 
+Note that the output of read_csv() is tibble.
+
+```{r Read_data}
+rm(list = ls(all = TRUE))
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(factoextra)
+library(plotly)
+library(cluster)
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+mnist_vec_train <- read_csv("mnist_vec_train.csv", col_names = T, col_types = cols())
+mnist_vec_test  <- read_csv("mnist_vec_test.csv",  col_names = T, col_types = cols())
+```
+
+Convert `tibbles` to `data.frame`
+
+```{r preprocess}
+df_train <- mnist_vec_train %>% t() %>% as.data.frame()
+df_test  <- mnist_vec_test  %>% t() %>% as.data.frame()
+```
+
+We use the first 1000 rows to build a sub-dataset and implement the K-means method
+to cluster these images (vectors). Notice that to implement K-means method `fviz_cluster`,
+there cannot be one or more column(s) in the dataset which have constant value 
+throughout for all the rows. Otherwise an error would be reported.
+
+```{}
+Error in prcomp.default(train, center = TRUE, scale = TRUE) :
+cannot rescale a constant/zero column to unit variance
+```
+
+```{r subDat}
+n_sub <- 300
+df_train_sub <- df_train[1:n_sub,]
+
+# Delete the all-zero columns.
+idx0 <- (colMeans(df_train_sub) == 0)
+df_train_sub_use <- df_train_sub[, !idx0]
+
+cat("Number of columns that are all zero:", sum(idx0),"\n")
+cat("New train df dim:", dim(df_train_sub_use))
+```
+
+We can see that there are 175 columns whose elements are all zeros.
+
+
+```{r Kmeans}
+fviz_nbclust(df_train_sub_use, kmeans, method = "wss",k.max=20) +
+  geom_vline(xintercept = 8, linetype = 2)
+km_res <- kmeans(df_train_sub_use, 8)
+fviz_cluster(km_res, data = df_train_sub_use,
+             ellipse = F,
+             show.clust.cent = F,
+             shape = 1,
+             repel = F,
+             pointsize = 0.5,
+             labelsize = 6,
+             geom = "text",
+             ggtheme = theme_grey())
+```
+
+# CIFAR-10
