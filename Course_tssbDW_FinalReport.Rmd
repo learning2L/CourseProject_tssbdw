@@ -388,18 +388,18 @@ for (i in 1){
 In this study, the data matrix are 700 $\times$ 2. There are seven classes, each of which has 100 data. 
 
 ```{r}
-set.seed(24)
+set.seed(12)
 
 m <- 700
 dims <- 2
-testData <- rbind(rmvnorm(m/7, mean = rep(2.0, dims), sigma = diag(0.10^2, dims, dims)),
-                  rmvnorm(m/7, mean = rep(3.5, dims), sigma = diag(0.03^2, dims, dims)),
-                  rmvnorm(m/7, mean = c(3.8, 4.0), sigma = diag(0.01^2, dims, dims)),
-                  rmvnorm(m/7, mean = c(4.0, 3.8), sigma = diag(0.01^2, dims, dims)),
+testData <- rbind(rmvnorm(m/7, mean = rep(1.0, dims), sigma = diag(0.10^2, dims, dims)),
+                  rmvnorm(m/7, mean = rep(1.5, dims), sigma = diag(0.03^2, dims, dims)),
+                  rmvnorm(m/7, mean = c(1.6, 1.8), sigma = diag(0.01^2, dims, dims)),
+                  rmvnorm(m/7, mean = c(1.8, 1.6), sigma = diag(0.01^2, dims, dims)),
                   
-                  rmvnorm(m/7, mean = rep(0.7, dims), sigma = diag(0.03^2, dims, dims)),
-                  rmvnorm(m/7, mean = c(0.5, 0.3), sigma = diag(0.01^2, dims, dims)),
-                  rmvnorm(m/7, mean = c(0.3, 0.5), sigma = diag(0.01^2, dims, dims))
+                  rmvnorm(m/7, mean = rep(0.5, dims), sigma = diag(0.03^2, dims, dims)),
+                  rmvnorm(m/7, mean = c(0.4, 0.2), sigma = diag(0.01^2, dims, dims)),
+                  rmvnorm(m/7, mean = c(0.2, 0.6), sigma = diag(0.01^2, dims, dims))
 )
 numOfData = nrow(testData)
 plot(testData[,1], testData[,2])
@@ -417,10 +417,11 @@ The settings of implementing the model are:
 
 The drift $\lambda$ is assigned the **inverse Gamma** prior. Then we **initialize** the Root Node and the corresponding Tssb.
 ```{r}
+set.seed(123)
+
 empCov <- cov(t(testData))
-empCov2 <- cov(testData)
 priorSigmaScale = mean(diag(empCov))
-priorDriftScale = min(diag(empCov2))
+priorDriftScale = priorSigmaScale
   
 minDepth  <- 0
 maxDepth  <- 3
@@ -446,9 +447,9 @@ After initialization, we update all the parameters using Gibbs sampler.
 ```{r, echo=F}
 Flag = F
 swapMain = T
-numOfMCMC = 1000
+numOfMCMC = 500
 burnIn = 100
-numOfOutput = 500
+numOfOutput = 250
 
 tssb <- tssbMCMC
 
@@ -630,6 +631,7 @@ p2 <- ggplot(plot_data, aes(x = V1, y=V2)) +
   geom_point(aes(color = factor(ind)))
 p2
 ```
+We can observe that there exists a *trade-off* between "the clusters are very divided" and "the data of the same branch are more clustered together". And this is controlled by the parameter $\eta_{\Theta}$. By choosing an appropriate value of $\eta_{\Theta}$, we can achieve these two tasks simultaneously. Unfortunately, in this study, the similarity within branches is not observed. We speculate that it may be related to the prior distribution of the drift $\lambda$. When $\eta_{\Theta}$ is smaller, the posterior of $\lambda$ may be tend to concentrate on larger values, which destroys the identifiability of the tree structure. In future research, we will try to use a bounded prior to solve this problem.
 
 
 # MNIST dataset
@@ -850,7 +852,16 @@ p2 <- ggplot(plot_data, aes(x = V1, y=V2)) +
 p2
 ```
 
-**Result 2.** Data in the same branches are closer than others. This shows our model is able to discover some unknown relationship behind clusters.
+**Result 2.** Data in the same branches are closer than others. This shows that our model is able to discover some unknown relationship behind clusters.
+
+# Conclusion
+
+In this report, we proposed a nonparametric tree-structured prior, TSSB-DW, which was a truncation version of TSSB. Based on this prior, our model was able to achieve the two important tasks in two-level clustering analysis: 
+
+* clustering data into different groups
+* discovering the tree-structured relationship behind groups. 
+
+The clustering abilities of our model were demonstrated by a simulation study and the application to the famous MNIST data set.
 
 # Future work
 
